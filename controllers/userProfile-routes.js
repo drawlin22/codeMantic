@@ -2,6 +2,7 @@ const router = require('express').Router();   // import express
 const User = require('../models/User');       // import user model
 const Form = require('../models/Form');       // import form model
 const Review = require ('../models/Review');  // import review model
+const withAuth = require('../utils/auth');
 
 // get all users and their form data
 router.get('/', async (req, res) => {
@@ -28,23 +29,10 @@ router.get('/', async (req, res) => {
 });
 
 
-
-
 // get specific user
 router.get('/user/:id', async (req, res) => {
     try {
         
-
-        // // Check if the user is logged in
-        // if (!req.session.loggedIn) {
-        //     return res.redirect('/login'); // Redirect to the login page if not logged in
-        //   } 
-      
-        //   // // Check if the requested user ID matches the logged-in user's ID
-        //   if (req.params.id !== req.session.user_id.toString()) {
-        //     return res.status(403).send('Access denied'); // Return a 403 Forbidden status
-        //   } 
-
         const userData = await User.findByPk(req.params.id, {
             where: {
                 id: req.params.id,
@@ -54,7 +42,9 @@ router.get('/user/:id', async (req, res) => {
                 model: Form,
                 attributes: ['languages', 'bio', "contact_method",'partner_pronouns','personality_type', 'operating_system', 'hobbies'],
               
-             }, { model: Review }
+             }, { model: Review,
+                attributes: ['Review_text','badge']
+             }
             ],
         });
     
@@ -62,11 +52,10 @@ router.get('/user/:id', async (req, res) => {
           return res.status(404).send('User not found');
         }
     
-        
-
         const user = userData.get({ plain: true });
         res.render('userProfile', {
           user,
+          reviews: user.reviews,
           loggedIn: req.session.loggedIn 
         });
     
@@ -76,30 +65,29 @@ router.get('/user/:id', async (req, res) => {
       }
 });
 
-// router.get('/solved', async (req, res) => {
-//     try {
-// console.log("test")
-//         const userData = await User.findAll({
-//             include: [{ 
-//                 model: Form,
-//                 attributes: ['languages', 'bio', "contact_method",'partner_pronouns','personality_type', 'operating_system', 'hobbies'],
-//              },
-//             ],
-//         });
 
-//         const users = userData.map((user) => user.get ({ plain: true }));
-//         console.log(users)
-//         res.render('solved', {
-//             users,
-//             loggedIn: req.session.loggedIn
-//         });
-//         // res.status(200).json(userData);
+// router.get('/user/:id/submitReview', async (req,res) => {
+// try {
+//   res.render('submitReviews')
+// } catch (err) {
+// res.status(500).json(err)
+// }
+// })
 
-//     } catch (err) {
-//         console.log(err);
-//         res.status(500).json(err);
-//     }
-// });
+
+// add in authenticate later
+router.post('/submitReview', async (req,res) => {
+  try {
+    const newReview = await Review.create({
+      ...req.body,
+      user_id:req.session.user_id,
+    })
+    res.status(200).json(newReview);
+  }catch (err){
+    // res.sendStatus(500).send(err);
+    console.log(err)
+  }
+})
 
 module.exports = router;    // Export Router
 
